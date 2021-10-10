@@ -20,6 +20,8 @@ const _ = grpc.SupportPackageIsVersion7
 type SensorClient interface {
 	TempSensor(ctx context.Context, in *SensorRequest, opts ...grpc.CallOption) (Sensor_TempSensorClient, error)
 	HumiditySensor(ctx context.Context, in *SensorRequest, opts ...grpc.CallOption) (Sensor_HumiditySensorClient, error)
+	ToxicitySensor(ctx context.Context, in *SensorRequest, opts ...grpc.CallOption) (Sensor_ToxicitySensorClient, error)
+	SetToxicityThreshold(ctx context.Context, in *ThresholdRequest, opts ...grpc.CallOption) (*ThresholdResponse, error)
 }
 
 type sensorClient struct {
@@ -94,12 +96,55 @@ func (x *sensorHumiditySensorClient) Recv() (*SensorResponse, error) {
 	return m, nil
 }
 
+func (c *sensorClient) ToxicitySensor(ctx context.Context, in *SensorRequest, opts ...grpc.CallOption) (Sensor_ToxicitySensorClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Sensor_ServiceDesc.Streams[2], "/sensors.Sensor/ToxicitySensor", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &sensorToxicitySensorClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Sensor_ToxicitySensorClient interface {
+	Recv() (*SensorResponse, error)
+	grpc.ClientStream
+}
+
+type sensorToxicitySensorClient struct {
+	grpc.ClientStream
+}
+
+func (x *sensorToxicitySensorClient) Recv() (*SensorResponse, error) {
+	m := new(SensorResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *sensorClient) SetToxicityThreshold(ctx context.Context, in *ThresholdRequest, opts ...grpc.CallOption) (*ThresholdResponse, error) {
+	out := new(ThresholdResponse)
+	err := c.cc.Invoke(ctx, "/sensors.Sensor/SetToxicityThreshold", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SensorServer is the server API for Sensor service.
 // All implementations must embed UnimplementedSensorServer
 // for forward compatibility
 type SensorServer interface {
 	TempSensor(*SensorRequest, Sensor_TempSensorServer) error
 	HumiditySensor(*SensorRequest, Sensor_HumiditySensorServer) error
+	ToxicitySensor(*SensorRequest, Sensor_ToxicitySensorServer) error
+	SetToxicityThreshold(context.Context, *ThresholdRequest) (*ThresholdResponse, error)
 	mustEmbedUnimplementedSensorServer()
 }
 
@@ -112,6 +157,12 @@ func (UnimplementedSensorServer) TempSensor(*SensorRequest, Sensor_TempSensorSer
 }
 func (UnimplementedSensorServer) HumiditySensor(*SensorRequest, Sensor_HumiditySensorServer) error {
 	return status.Errorf(codes.Unimplemented, "method HumiditySensor not implemented")
+}
+func (UnimplementedSensorServer) ToxicitySensor(*SensorRequest, Sensor_ToxicitySensorServer) error {
+	return status.Errorf(codes.Unimplemented, "method ToxicitySensor not implemented")
+}
+func (UnimplementedSensorServer) SetToxicityThreshold(context.Context, *ThresholdRequest) (*ThresholdResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetToxicityThreshold not implemented")
 }
 func (UnimplementedSensorServer) mustEmbedUnimplementedSensorServer() {}
 
@@ -168,13 +219,57 @@ func (x *sensorHumiditySensorServer) Send(m *SensorResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _Sensor_ToxicitySensor_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SensorRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(SensorServer).ToxicitySensor(m, &sensorToxicitySensorServer{stream})
+}
+
+type Sensor_ToxicitySensorServer interface {
+	Send(*SensorResponse) error
+	grpc.ServerStream
+}
+
+type sensorToxicitySensorServer struct {
+	grpc.ServerStream
+}
+
+func (x *sensorToxicitySensorServer) Send(m *SensorResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _Sensor_SetToxicityThreshold_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ThresholdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SensorServer).SetToxicityThreshold(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sensors.Sensor/SetToxicityThreshold",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SensorServer).SetToxicityThreshold(ctx, req.(*ThresholdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Sensor_ServiceDesc is the grpc.ServiceDesc for Sensor service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var Sensor_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "sensors.Sensor",
 	HandlerType: (*SensorServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "SetToxicityThreshold",
+			Handler:    _Sensor_SetToxicityThreshold_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "TempSensor",
@@ -184,6 +279,11 @@ var Sensor_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "HumiditySensor",
 			Handler:       _Sensor_HumiditySensor_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "ToxicitySensor",
+			Handler:       _Sensor_ToxicitySensor_Handler,
 			ServerStreams: true,
 		},
 	},

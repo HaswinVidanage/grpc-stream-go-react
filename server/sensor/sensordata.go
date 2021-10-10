@@ -38,6 +38,13 @@ func (s *Sensor) SetHumiditySensor() {
 	}
 }
 
+func (s *Sensor) SetToxicitySensor(val int) int {
+	s.M.Lock()
+	s.Data["toxicity"] = int64(val)
+	s.M.Unlock()
+	return val
+}
+
 //StartMonitoring will start fetch data from fake sensors in Goroutines
 func (s *Sensor) StartMonitoring() {
 	log.Println("Start monitoring...")
@@ -49,7 +56,7 @@ func (s *Sensor) StartMonitoring() {
 func (s *Sensor) GetTempSensor() int64 {
 	s.M.RLock()
 	defer s.M.RUnlock()
-	return  s.Data["temp"]
+	return s.Data["temp"]
 }
 
 //GetHumiditySensor returns the latest temperature sensor data
@@ -57,4 +64,11 @@ func (s *Sensor) GetHumiditySensor() int64 {
 	s.M.RLock()
 	defer s.M.RUnlock()
 	return s.Data["humidity"]
+}
+
+//GetHumiditySensor returns the latest temperature sensor data
+func (s *Sensor) GetToxicity() int64 {
+	s.M.RLock()
+	defer s.M.RUnlock()
+	return s.Data["toxicity"]
 }

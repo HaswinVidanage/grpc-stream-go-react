@@ -10,7 +10,18 @@ message SensorResponse {
   int64 value = 1;
 }
 
+message ThresholdRequest {
+  int64 value =1;
+}
+
+message ThresholdResponse {
+  int64 value =1;
+}
+
+
 service Sensor{
   rpc TempSensor(SensorRequest) returns (stream SensorResponse) {};
   rpc HumiditySensor(SensorRequest) returns (stream SensorResponse) {};
+  rpc ToxicitySensor(SensorRequest) returns (stream SensorResponse) {};
+  rpc SetToxicityThreshold(ThresholdRequest) returns(ThresholdResponse){};
 }

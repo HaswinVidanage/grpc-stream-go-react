@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"google.golang.org/grpc"
 	"grpc_stream-local/server/sensor"
@@ -9,7 +10,6 @@ import (
 	"net"
 	"time"
 )
-
 
 type server struct {
 	Sensor *sensor.Sensor
@@ -42,6 +42,26 @@ func (s *server) HumiditySensor(req *sensorpb.SensorRequest,
 		time.Sleep(time.Second * 2)
 	}
 	return nil
+}
+
+func (s *server) ToxicitySensor(req *sensorpb.SensorRequest,
+	stream sensorpb.Sensor_ToxicitySensorServer) error {
+	for {
+		toxic := s.Sensor.GetToxicity()
+		err := stream.Send(&sensorpb.SensorResponse{Value: toxic})
+		if err != nil {
+			log.Println("Error sending metric message ", err)
+		}
+		time.Sleep(time.Second * 2)
+	}
+}
+
+func (s *server) SetToxicityThreshold(ctx context.Context, res *sensorpb.ThresholdRequest) (*sensorpb.ThresholdResponse, error) {
+	fmt.Println("SetToxicityThreshold called!!!", res)
+	val := s.Sensor.SetToxicitySensor(int(res.Value))
+	return &sensorpb.ThresholdResponse{
+		Value: int64(val),
+	}, nil
 }
 
 var (
